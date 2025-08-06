@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Candidate Data Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #0052cc; --primary-hover: #0041a3; --danger-color: #de350b;
+            --success-color: #00875a; --secondary-color: #505f79; --bg-color: #f4f5f7;
+            --card-bg: #ffffff; --text-dark: #172b4d; --text-light: #5e6c84;
+            --border-color: #dfe1e6;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Roboto', sans-serif; background-color: var(--bg-color);
+            color: var(--text-dark); line-height: 1.6;
+        }
+        .container { width: 95%; max-width: 1500px; margin: 2rem auto; }
+        header { text-align: center; margin-bottom: 2rem; }
+        h1 { font-size: 2.5rem; color: var(--text-dark); font-weight: 700; }
+        .main-nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; margin-bottom: 2rem; }
+        .nav-btn {
+            background-color: var(--card-bg); color: var(--text-light); border: 1px solid var(--border-color);
+            padding: 0.8rem 1.5rem; border-radius: 6px; cursor: pointer; font-size: 1rem;
+            font-weight: 500; transition: all 0.2s ease;
+        }
+        .nav-btn.active {
+            background-color: var(--primary-color); color: white; border-color: var(--primary-color);
+        }
+        .page-section {
+            display: none; background-color: var(--card-bg); border-radius: 8px;
+            padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .page-section.active { display: block; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        h2 {
+            font-size: 1.75rem; margin-bottom: 2rem; text-align: left;
+            border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;
+        }
+        .form-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem; margin-bottom: 1.5rem;
+        }
+        .form-group label { display: block; font-size: 0.9rem; font-weight: 500; margin-bottom: 0.5rem; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 0.8rem; border: 1px solid var(--border-color);
+            border-radius: 6px; font-size: 1rem; background-color: #fafbfc;
+        }
+        .btn {
+            color: white; padding: 0.8rem 1.5rem;
+            border: none; border-radius: 6px; cursor: pointer; font-size: 1rem;
+            font-weight: 500; transition: background-color 0.2s ease;
+            margin-right: 10px;
+        }
+        .btn-primary { background-color: var(--primary-color); }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-print { background-color: var(--success-color); }
+        .btn-print:hover { background-color: #006644; }
+        .btn-pdf { background-color: var(--danger-color); }
+        .btn-pdf:hover { background-color: #bf2600; }
+
+        .table-container { overflow-x: auto; margin-top: 1.5rem; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+        th { background-color: #fafbfc; font-weight: 500; font-size: 0.9rem; color: var(--text-light); }
+        .contact-cell { display: flex; align-items: center; gap: 15px; }
+        .contact-cell a { color: var(--primary-color); text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
+        .contact-cell a:hover { text-decoration: underline; }
+        .status-message {
+             text-align: center; margin-top: 1.5rem; padding: 1rem; border-radius: 6px;
+             font-weight: 500; display: none;
+        }
+        .status-error { color: var(--danger-color); background-color: #ffebe6; border: 1px solid var(--danger-color); }
+        .status-success { color: var(--success-color); background-color: #e3fcef; border: 1px solid var(--success-color); }
+        .result-card { border-left: 4px solid var(--primary-color); padding: 1.5rem; background-color: #fafbfc; border-radius: 4px; }
+        .result-card p { margin: 0 0 0.75rem 0; font-size: 1.1rem; }
+        .result-card strong { color: var(--text-dark); min-width: 150px; display: inline-block; }
+
+        .image-container {
+            width: 1100px;
+            height: auto;
+            padding: 20px;
+            background-color: #ffffff;
+            font-family: 'Roboto', sans-serif;
+            border: 1px solid #dfe1e6;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        .image-header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .image-header h3 {
+            margin: 0;
+            color: var(--primary-color);
+        }
+        .image-header p {
+            margin: 5px 0 0;
+            color: var(--secondary-color);
+        }
+        .image-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        .image-table th, .image-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            white-space: nowrap;
+        }
+        .image-table th {
+            background-color: #f2f2f2;
+            font-weight: 500;
+        }
+        .image-footer {
+            position: absolute;
+            bottom: 10px;
+            right: 20px;
+            font-size: 0.8rem;
+            color: #888;
+        }
+        .download-btn-container {
+            text-align: center;
+            margin-top: 10px;
+        }
+        .btn-download-image {
+            background-color: var(--primary-color);
+        }
+
+        @media print {
+            @page { size: A4 landscape; margin: 1.5cm; }
+            body { background-color: #fff; }
+            body * { visibility: hidden; }
+            #printableArea, #printableArea * { visibility: visible; }
+            #printableArea { position: absolute; left: 0; top: 0; width: 100%; }
+            table { font-size: 9pt; width: 100%; }
+            th, td { padding: 6px; }
+            .contact-cell a, .btn { display: none; }
+            h2.print-title { display: block !important; text-align: center; border-bottom: 2px solid #000; margin-bottom: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header><h1>Candidate Data Dashboard</h1></header>
+
+    <nav class="main-nav">
+        <button class="nav-btn active" data-target="checkStatusSection">Check Status</button>
+        <button class="nav-btn" data-target="droppedOutSection">Dropped Out</button>
+        <button class="nav-btn" data-target="trainerPanelSection">Trainer Panel</button>
+        <button class="nav-btn" data-target="tlConnectSection">TL Connect</button>
+    </nav>
+
+    <div id="checkStatusSection" class="page-section active">
+        <h2>Check Candidate Status</h2>
+        <div class="form-grid" style="max-width: 500px;">
+            <div class="form-group"><label for="searchNumber">Enter Mobile Number</label><input type="tel" id="searchNumber" placeholder="10-digit mobile number..."></div>
+        </div>
+        <button id="btnSearch" class="btn btn-primary">Search</button>
+        <div id="checkStatusResult" style="margin-top: 2rem;"></div>
+    </div>
+
+    <div id="droppedOutSection" class="page-section">
+        <h2>Dropped Out Candidates</h2>
+        <div class="form-group"><input type="search" id="searchDroppedOut" placeholder="Search by name, number, CAN ID..."></div>
+        <div class="table-container"><table id="droppedOutTable"></table></div>
+    </div>
+
+    <div id="trainerPanelSection" class="page-section">
+        <h2>Trainer Panel</h2>
+        <div class="form-grid">
+            <div class="form-group"><label for="filterTrainer">Trainer</label><select id="filterTrainer"><option value="">All</option></select></div>
+            <div class="form-group"><label for="filterRegion">Region</label><select id="filterRegion"><option value="">All</option></select></div>
+            <div class="form-group"><label for="filterState">State</label><select id="filterState"><option value="">All</option></select></div>
+            <div class="form-group"><label for="filterLocation">Location</label><select id="filterLocation"><option value="">All</option></select></div>
+            <div class="form-group"><label for="filterBusiness">Business</label><select id="filterBusiness"><option value="">All</option></select></div>
+            <div class="form-group"><label for="filterEkyc">EKYC Remark</label><select id="filterEkyc"><option value="">All</option></select></div>
+            <div class="form-group"><label for="filterPsTest">Psychometric Test</label><select id="filterPsTest"><option value="">All</option></select></div>
+        </div>
+        <button id="btnShowRecords" class="btn btn-primary">Show Records</button>
+        <div id="filterResult" class="status-message"></div>
+        <div id="recordsContainer" style="display:none; margin-top: 1.5rem;">
+            <div class="form-group"><input type="search" id="searchRecords" placeholder="Search in results..."></div>
+            <div id="printableArea">
+                <h2 class="print-title" style="display: none;">Trainer Panel Report</h2>
+                <div class="table-container"><table id="recordsTable"></table></div>
+            </div>
+            <button id="btnPrint" class="btn btn-print" style="margin-top: 1rem;">Print this Report</button>
+        </div>
+    </div>
+
+    <div id="tlConnectSection" class="page-section">
+       <h2>TL Connect</h2>
+        <div class="form-grid">
+            <div class="form-group"><label for="tlFilterTrainer">Trainer</label><select id="tlFilterTrainer"><option value="">All</option></select></div>
+            <div class="form-group"><label for="tlFilterBusiness">Business</label><select id="tlFilterBusiness"><option value="">All</option></select></div>
+            <div class="form-group"><label for="tlFilterTlName">TL Name</label><select id="tlFilterTlName"><option value="">All</option></select></div>
+        </div>
+        <button id="btnApplyFilters" class="btn btn-primary">Apply</button>
+        <button id="btnGenerateList" class="btn btn-print">Generate List</button>
+        <div id="tlListResult" class="status-message"></div>
+        <div id="tlGeneratedImagesContainer" style="margin-top: 2rem;"></div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const { jsPDF } = window.jspdf;
+    
+    let allCandidates = [];
+    let droppedOutCandidates = [];
+
+    // --- INITIALIZATION ---
+    fetch('Data.json')
+        .then(response => { if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`); return response.json(); })
+        .then(data => {
+            allCandidates = data["Main Sheet "];
+            droppedOutCandidates = data["Drop out"];
+            initializeApp();
+        })
+        .catch(error => {
+            document.querySelector('.container').innerHTML = `<div class="status-message status-error" style="display:block; text-align:center;"><h2>Data Load Error</h2><p>'Data.json' file not found or is invalid.</p><small>Error: ${error.message}</small></div>`;
+        });
+
+    function initializeApp() {
+        // --- Navigation ---
+        const navButtons = document.querySelectorAll('.nav-btn');
+        const pageSections = document.querySelectorAll('.page-section');
+        navButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                navButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                pageSections.forEach(section => section.classList.remove('active'));
+                document.getElementById(button.dataset.target).classList.add('active');
+            });
+        });
+
+        // --- Generic Helper Functions ---
+        const createTable = (tableEl, headers, data) => {
+            if (!data || data.length === 0) {
+                tableEl.innerHTML = '<tbody><tr><td colspan="' + headers.length + '" style="text-align:center;">No records found.</td></tr></tbody>';
+                return;
+            }
+            tableEl.innerHTML = `<thead><tr>${headers.map(h => `<th>${h.label}</th>`).join('')}</tr></thead>
+                                 <tbody>${data.map((row, index) => `<tr>${headers.map(h => `<td>${h.render(row, index)}</td>`).join('')}</tr>`).join('')}</tbody>`;
+        };
+        const setupSearch = (inputId, tableId) => {
+            document.getElementById(inputId).addEventListener('keyup', function() {
+                const searchText = this.value.toLowerCase();
+                document.querySelectorAll(`#${tableId} tbody tr`).forEach(row => {
+                    row.style.display = row.textContent.toLowerCase().includes(searchText) ? '' : 'none';
+                });
+            });
+        };
+        const contactIcons = (number) => {
+            if (!number) return 'N/A';
+            const cleanNumber = String(number).split('/')[0].trim();
+            return `<div class="contact-cell">${number}
+                <a href="tel:${cleanNumber}" title="Call"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M3.654 1.328a.678.678 0 0 0-1.015-.063L1.605 2.3c-.483.484-.661 1.169-.45 1.77a17.6 17.6 0 0 0 4.168 6.608 17.6 17.6 0 0 0 6.608 4.168c.601.211 1.286.033 1.77-.45l1.034-1.034a.678.678 0 0 0-.063-1.015l-2.307-1.794a.68.68 0 0 0-.58-.122l-2.19.547a1.75 1.75 0 0 1-1.657-.459L5.482 8.062a1.75 1.75 0 0 1-.46-1.657l.548-2.19a.68.68 0 0 0-.122-.58z"/></svg></a>
+                <a href="https://wa.me/91${cleanNumber}" target="_blank" title="WhatsApp"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232"/></svg></a>
+            </div>`;
+        };
+        const populateSelect = (selectEl, options) => {
+            const currentVal = selectEl.value;
+            const uniqueOptions = [...new Set(options)].filter(Boolean).sort();
+            selectEl.innerHTML = `<option value="">All</option>`;
+            uniqueOptions.forEach(opt => selectEl.innerHTML += `<option value="${opt}">${opt}</option>`);
+            selectEl.value = currentVal;
+        };
+        const showMessage = (element, text, type) => {
+            element.textContent = text;
+            element.className = `status-message status-${type}`;
+            element.style.display = 'block';
+        };
+
+        // --- CHECK STATUS ---
+        document.getElementById('btnSearch').addEventListener('click', () => {
+            const resultDiv = document.getElementById('checkStatusResult');
+            const mobileNumber = document.getElementById('searchNumber').value.trim();
+            const foundCandidate = allCandidates.find(c => String(c["Contact Number"]).trim() === mobileNumber);
+
+            if (foundCandidate) {
+                resultDiv.innerHTML = `<div class="result-card">
+                    <p><strong>Candidate Name:</strong> <span>${foundCandidate["Candidate Name"] || 'N/A'}</span></p>
+                    <p><strong>Contact Number:</strong> <span>${foundCandidate["Contact Number"] || 'N/A'}</span></p>
+                    <p><strong>Business:</strong> <span>${foundCandidate["Business (MX/DA/VD/AC)"] || 'N/A'}</span></p>
+                    <p><strong>TL Name:</strong> <span>${foundCandidate["TL Name"] || 'N/A'}</span></p>
+                    <p><strong>TL Contact:</strong> <span>${foundCandidate["TL Contact"] || 'N/A'}</span></p>
+                    <p><strong>Location:</strong> <span>${foundCandidate["Location"] || 'N/A'}</span></p>
+                    <p><strong>State:</strong> <span>${foundCandidate["State"] || 'N/A'}</span></p>
+                    <p><strong>CAN ID:</strong> <span>${foundCandidate["CAN Id."] || 'N/A'}</span></p>
+                    <p><strong>Aadhaar Number:</strong> <span>${foundCandidate["Aadhar Number"] || 'N/A'}</span></p>
+                    <p><strong>EKYC Remark:</strong> <span>${foundCandidate["REMARKS"] || 'N/A'}</span></p>
+                    <p><strong>Psychometric Test:</strong> <span>${foundCandidate["Physcometric"] || 'Pending'}</span></p>
+                </div>`;
+            } else {
+                resultDiv.innerHTML = `<div class="status-message status-error" style="display:block;">Is number se koi record nahi mila.</div>`;
+            }
+        });
+
+        // --- DROPPED OUT ---
+        const droppedOutHeaders = [
+            { label: 'Sr. No.', render: (r, i) => i + 1 }, { label: 'Name', render: r => r["Candidate Name"] || 'N/A' },
+            { label: 'Mobile', render: r => contactIcons(r["Contact Number"]) }, { label: 'CAN ID', render: r => r["CAN Id."] || 'N/A' },
+            { label: 'Vertical', render: r => r.Vertical || 'N/A' }, { label: 'Trainer', render: r => r["Trainer Name"] || 'N/A' },
+            { label: 'TL Name', render: r => r["TL Name"] || 'N/A' },
+        ];
+        createTable(document.getElementById('droppedOutTable'), droppedOutHeaders, droppedOutCandidates);
+        setupSearch('searchDroppedOut', 'droppedOutTable');
+
+        // --- TRAINER PANEL ---
+        const filterTrainer = document.getElementById('filterTrainer');
+        const filterRegion = document.getElementById('filterRegion');
+        const filterState = document.getElementById('filterState');
+        const filterLocation = document.getElementById('filterLocation');
+        const filterBusiness = document.getElementById('filterBusiness');
+        const filterEkyc = document.getElementById('filterEkyc');
+        const filterPsTest = document.getElementById('filterPsTest');
+
+        populateSelect(filterTrainer, allCandidates.map(c => c["Trainer Name"]));
+        populateSelect(filterRegion, allCandidates.map(c => c.Region));
+        populateSelect(filterState, allCandidates.map(c => c.State));
+        populateSelect(filterLocation, allCandidates.map(c => c.Location));
+        populateSelect(filterBusiness, allCandidates.map(c => c["Business (MX/DA/VD/AC)"]));
+        populateSelect(filterEkyc, allCandidates.map(c => c.REMARKS));
+        const psTestOptions = [...new Set(allCandidates.map(c => c.Physcometric || "Pending"))];
+        populateSelect(filterPsTest, psTestOptions);
+
+        document.getElementById('btnShowRecords').addEventListener('click', () => {
+            const filtered = allCandidates.filter(r =>
+                (!filterTrainer.value || r["Trainer Name"] === filterTrainer.value) &&
+                (!filterRegion.value || r.Region === filterRegion.value) &&
+                (!filterState.value || r.State === filterState.value) &&
+                (!filterLocation.value || r.Location === filterLocation.value) &&
+                (!filterBusiness.value || r["Business (MX/DA/VD/AC)"] === filterBusiness.value) &&
+                (!filterEkyc.value || r.REMARKS === filterEkyc.value) &&
+                (!filterPsTest.value || (r.Physcometric || "Pending") === filterPsTest.value)
+            );
+            const container = document.getElementById('recordsContainer');
+            const resultDiv = document.getElementById('filterResult');
+            if(filtered.length > 0) {
+                 const headers = [
+                    { label: 'Sr. No.', render: (r, i) => i + 1 }, { label: 'Name', render: r => r["Candidate Name"] },
+                    { label: 'Mobile', render: r => contactIcons(r["Contact Number"]) }, { label: 'Aadhaar', render: r => r["Aadhar Number"] },
+                    { label: 'CAN ID', render: r => r["CAN Id."] }, { label: 'Trainer', render: r => r["Trainer Name"] },
+                    { label: 'EKYC', render: r => r.REMARKS }, { label: 'PS Test', render: r => r.Physcometric || 'Pending' },
+                 ];
+                createTable(document.getElementById('recordsTable'), headers, filtered);
+                showMessage(resultDiv, `${filtered.length} records miley.`, 'success');
+                container.style.display = 'block';
+            } else {
+                showMessage(resultDiv, 'Is filter se koi record nahi mila.', 'error');
+                container.style.display = 'none';
+            }
+        });
+        setupSearch('searchRecords', 'recordsTable');
+        document.getElementById('btnPrint').addEventListener('click', () => window.print());
+
+        // --- TL CONNECT ---
+        const tlFilterTrainer = document.getElementById('tlFilterTrainer');
+        const tlFilterBusiness = document.getElementById('tlFilterBusiness');
+        const tlFilterTlName = document.getElementById('tlFilterTlName');
+        const btnApplyFilters = document.getElementById('btnApplyFilters');
+        const btnGenerateList = document.getElementById('btnGenerateList');
+        const tlListResult = document.getElementById('tlListResult');
+        const tlGeneratedImagesContainer = document.getElementById('tlGeneratedImagesContainer');
+
+        const updateTlFilters = () => {
+            const selectedTrainer = tlFilterTrainer.value;
+            const selectedBusiness = tlFilterBusiness.value;
+            
+            let filteredTls = allCandidates;
+            if (selectedTrainer) {
+                filteredTls = filteredTls.filter(c => c["Trainer Name"] === selectedTrainer);
+            }
+            if (selectedBusiness) {
+                filteredTls = filteredTls.filter(c => c["Business (MX/DA/VD/AC)"] === selectedBusiness);
+            }
+            
+            const uniqueTls = [...new Set(filteredTls.map(c => c["TL Name"]))].filter(Boolean).sort();
+            const currentSelectedTl = tlFilterTlName.value;
+            
+            tlFilterTlName.innerHTML = `<option value="">All</option>`;
+            uniqueTls.forEach(tl => tlFilterTlName.innerHTML += `<option value="${tl}">${tl}</option>`);
+            
+            if (uniqueTls.includes(currentSelectedTl)) {
+                tlFilterTlName.value = currentSelectedTl;
+            } else {
+                tlFilterTlName.value = '';
+            }
+        };
+
+        populateSelect(tlFilterTrainer, allCandidates.map(c => c["Trainer Name"]));
+        populateSelect(tlFilterBusiness, allCandidates.map(c => c["Business (MX/DA/VD/AC)"]));
+        populateSelect(tlFilterTlName, allCandidates.map(c => c["TL Name"]));
+
+        btnApplyFilters.addEventListener('click', updateTlFilters);
+
+        btnGenerateList.addEventListener('click', () => {
+            const selectedTlName = tlFilterTlName.value;
+            const selectedTrainer = tlFilterTrainer.value;
+            const selectedBusiness = tlFilterBusiness.value;
+
+            if (!selectedTlName) {
+                showMessage(tlListResult, 'Please select a TL Name to generate the list.', 'error');
+                tlGeneratedImagesContainer.innerHTML = '';
+                return;
+            }
+            
+            const filteredCandidates = allCandidates.filter(c =>
+                c["TL Name"] === selectedTlName &&
+                (!selectedTrainer || c["Trainer Name"] === selectedTrainer) &&
+                (!selectedBusiness || c["Business (MX/DA/VD/AC)"] === selectedBusiness)
+            );
+
+            if (filteredCandidates.length === 0) {
+                showMessage(tlListResult, 'No candidates found for the selected TL and filters.', 'error');
+                tlGeneratedImagesContainer.innerHTML = '';
+                return;
+            }
+
+            showMessage(tlListResult, `${filteredCandidates.length} candidates found for ${selectedTlName}. Generating images...`, 'success');
+            tlGeneratedImagesContainer.innerHTML = '';
+
+            const chunkSize = 10;
+            const totalChunks = Math.ceil(filteredCandidates.length / chunkSize);
+
+            for (let i = 0; i < totalChunks; i++) {
+                const chunk = filteredCandidates.slice(i * chunkSize, (i + 1) * chunkSize);
+                generateTlImage(selectedTlName, chunk, i + 1, totalChunks);
+            }
+        });
+        
+        const generateTlImage = (tlName, candidates, pageNum, totalPages) => {
+            const tlContact = candidates[0]["TL Contact"] || 'N/A';
+            
+            // Create a temporary div for html2canvas to render
+            const tempDiv = document.createElement('div');
+            tempDiv.style.width = '1100px';
+            tempDiv.style.height = '650px';
+            tempDiv.style.padding = '20px';
+            tempDiv.style.backgroundColor = '#ffffff';
+            tempDiv.style.fontFamily = 'Roboto, sans-serif';
+            tempDiv.style.position = 'absolute';
+            tempDiv.style.left = '-9999px'; // Hide it from view
+            document.body.appendChild(tempDiv);
+
+            tempDiv.innerHTML = `
+                <div class="image-header">
+                    <h3 style="margin: 0; color: #0052cc;">TL Name: ${tlName}</h3>
+                    <p style="margin: 5px 0 0; color: #505f79;">TL Contact: ${tlContact}</p>
+                </div>
+                <div class="table-container">
+                    <table class="image-table">
+                        <thead>
+                            <tr>
+                                <th>Sr. No.</th>
+                                <th>Candidate Name</th>
+                                <th>Candidate Contact Number</th>
+                                <th>EKYC Remark</th>
+                                <th>Psychometric Test</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${candidates.map((c, idx) => `
+                                <tr>
+                                    <td>${(pageNum - 1) * 10 + idx + 1}</td>
+                                    <td>${c["Candidate Name"] || 'N/A'}</td>
+                                    <td>${c["Contact Number"] || 'N/A'}</td>
+                                    <td>${c.REMARKS || 'N/A'}</td>
+                                    <td>${c.Physcometric || 'Pending'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="image-footer">
+                    Page ${pageNum} of ${totalPages}
+                </div>
+            `;
+            
+            html2canvas(tempDiv, { scale: 2 }).then(canvas => {
+                // Create a new div to display the generated image and download button
+                const displayDiv = document.createElement('div');
+                displayDiv.className = 'image-display-container';
+                displayDiv.style.marginBottom = '20px';
+                
+                const imageEl = document.createElement('img');
+                imageEl.src = canvas.toDataURL('image/png');
+                imageEl.style.width = '100%';
+                imageEl.style.border = '1px solid #dfe1e6';
+                imageEl.style.borderRadius = '8px';
+
+                const downloadBtnContainer = document.createElement('div');
+                downloadBtnContainer.className = 'download-btn-container';
+
+                const downloadBtn = document.createElement('a');
+                downloadBtn.href = imageEl.src;
+                downloadBtn.download = `TL_List_${tlName.replace(/\s/g, '_')}_page_${pageNum}.png`;
+                downloadBtn.className = 'btn btn-primary';
+                downloadBtn.textContent = `Download Image Page ${pageNum}`;
+
+                downloadBtnContainer.appendChild(downloadBtn);
+                displayDiv.appendChild(imageEl);
+                displayDiv.appendChild(downloadBtnContainer);
+                tlGeneratedImagesContainer.appendChild(displayDiv);
+                
+                tempDiv.remove(); // Remove the temporary div
+            }).catch(error => {
+                console.error("Error generating image:", error);
+                showMessage(tlListResult, `Failed to generate image for page ${pageNum}.`, 'error');
+                tempDiv.remove();
+            });
+        };
+    }
+});
+</script>
+
+</body>
+</html>
